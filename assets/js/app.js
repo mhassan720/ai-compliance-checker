@@ -9,7 +9,7 @@
   var NIST_SCREENING = ["sc-use", "sc-annex1", "sc-runtime", "sc-significant"];
   var app = document.getElementById("app");
   var state = load();
-  var ui = { framework: state.framework, gapFilter: "all", tab: "overview" };
+  var ui = { framework: state.framework, gapFilter: "all", tab: "overview", ai: { plan: "", messages: [], busy: "", error: "" } };
 
   // ---------- Persistence ----------
   function blank() {
@@ -84,6 +84,54 @@
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
+  function aiEnabled() {
+    return !!(window.AICC_CONFIG && window.AICC_CONFIG.aiEndpoint);
+  }
+  // Minimal, safe formatting for AI answers: escape everything, then bold and lists.
+  function formatAi(text) {
+    var out = [], list = null;
+    esc(text).split(/\n/).forEach(function (line) {
+      var l = line.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").trim();
+      var m = l.match(/^(\d+)[.)]\s+(.*)$/) || l.match(/^[-*•]\s+(.*)$/);
+      var kind = /^\d/.test(l) && m ? "ol" : m ? "ul" : null;
+      if (kind) {
+        if (!list || list.kind !== kind) { list = { kind: kind, items: [] }; out.push(list); }
+        list.items.push(m[m.length - 1]);
+      } else {
+        list = null;
+        if (l) out.push("<p>" + l.replace(/^#+\s*/, "") + "</p>");
+      }
+    });
+    return out.map(function (b) {
+      return typeof b === "string" ? b : "<" + b.kind + ">" + b.items.map(function (i) { return "<li>" + i + "</li>"; }).join("") + "</" + b.kind + ">";
+    }).join("");
+  }
+  // The only data sent to the AI service: no system name, organisation or notes.
+  function aiContext(r) {
+    return {
+      framework: fwLabel(r.framework),
+      tier: tierLabel(r.profile.tier),
+      overall: r.overall,
+      scores: r.frameworks.map(function (f) { return f.name + " " + f.score + "%"; }),
+      layers: r.layers.map(function (l) { return l.label + " " + (l.score === null ? "n/a" : l.score + "%"); }),
+      openThreats: r.threats.filter(function (t) { return t.status === "open" || t.status === "partial"; }).map(function (t) { return t.name; }),
+      gaps: r.gaps.slice(0, 15).map(function (g) { return { ref: g.ref, text: g.text, severity: g.severity, section: g.section }; })
+    };
+  }
+  function callAi(path, body) {
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, 90000);
+    return fetch(window.AICC_CONFIG.aiEndpoint.replace(/\/$/, "") + path, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: ctrl.signal
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (data) {
+        if (!res.ok) throw new Error(data.detail || "The AI assistant is not available right now.");
+        return data;
+      });
+    }, function () {
+      throw new Error("Could not reach the AI assistant. It may be starting up; try again in a minute.");
+    }).finally(function () { clearTimeout(timer); });
+  }
   function slug(s) {
     return (s || "ai-system").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "ai-system";
   }
@@ -144,7 +192,7 @@
       '<span class="chip chip-accent eyebrow">Free and open source · No account needed</span>' +
       "<h1>Check your AI system's compliance readiness</h1>" +
       '<p class="lead">Classify your AI system\'s risk, answer targeted questions, and get a score, a gap analysis with article references, a remediation roadmap and a document checklist.</p>' +
-      '<div class="trust-row"><span>Runs entirely in your browser</span><span>Answers are never uploaded</span><span>Export to PDF, JSON or CSV</span></div>' +
+      '<div class="trust-row"><span>Runs in your browser</span><span>Your answers stay on your device</span><span>Export to PDF, JSON or CSV</span>' + (aiEnabled() ? "<span>Optional AI assistant</span>" : "") + "</div>" +
       '<p class="muted small" style="margin-top:14px">New: an optional <a href="#/about">Runtime Assurance module</a> checks whether your controls are enforced on every decision, not only documented.</p>' +
       "</section>";
 
@@ -374,6 +422,8 @@
       }).join("") + "</div></div></div>";
 
     var tabs = [["overview", "Overview"], ["coverage", "Coverage"], ["gaps", "Gaps (" + r.gaps.length + ")"], ["roadmap", "Roadmap"], ["documents", "Documents (" + r.documents.length + ")"]];
+    if (aiEnabled()) tabs.push(["ai", "AI Assistant"]);
+    else if (ui.tab === "ai") ui.tab = "overview";
     html += '<div class="tabs" role="tablist">' + tabs.map(function (t) {
       return '<button role="tab" aria-selected="' + (ui.tab === t[0]) + '" data-action="tab" data-tab="' + t[0] + '">' + t[1] + "</button>";
     }).join("") + "</div>";
@@ -382,7 +432,8 @@
       panel("coverage", "Where your controls are enforced", coverageHtml(r)) +
       panel("gaps", "Gap analysis", gapsHtml(r)) +
       panel("roadmap", "Remediation roadmap", roadmapHtml(r)) +
-      panel("documents", "Required documentation", documentsHtml(r));
+      panel("documents", "Required documentation", documentsHtml(r)) +
+      (aiEnabled() ? panel("ai", "AI remediation plan", '<div id="ai-panel">' + aiHtml() + "</div>") : "");
 
     html += '<p class="muted small" style="margin-top:28px">This is a self-assessment based on your answers. It is not legal advice and does not replace a conformity assessment or audit.</p>' +
       '<div class="btn-row no-print" style="margin-top:12px"><button class="btn btn-ghost btn-sm" data-action="reset">Start a new assessment</button></div></div>';
@@ -441,6 +492,59 @@
       }).join("") + "</tbody></table>" +
       '<p class="muted small" style="margin:10px 0 0">Out of scope for runtime checks: a manipulation that keeps the whole behavioural fingerprint unchanged, a model already compromised before certification, and subversion of the trusted computing base. These need offline attestation.</p></div>';
     return html;
+  }
+
+  var AI_SUGGESTIONS = ["Which gap should I fix first, and why?", "Explain my risk classification in simple words", "What evidence will an auditor ask me for?"];
+
+  function aiHtml() {
+    var a = ui.ai;
+    var html = '<div class="card ai-note no-print"><b>How this works.</b> When you click a button below, your framework, risk level, scores and top 15 gaps are sent to the AI assistant hosted on Hugging Face. ' +
+      "Your system name, organisation and notes are never sent, and nothing is stored. AI answers can be wrong; check them before acting.</div>";
+    html += '<div class="card" style="margin-top:14px"><div class="sec-head" style="justify-content:space-between"><h3 style="margin:0">Remediation plan</h3>' +
+      '<button class="btn btn-sm btn-primary no-print" data-action="ai-plan"' + (a.busy ? " disabled" : "") + ">" + (a.plan ? "Generate again" : "Generate AI plan") + "</button></div>" +
+      (a.busy === "plan" ? '<p class="muted ai-wait">Writing your plan. This can take up to a minute…</p>' : "") +
+      (a.plan ? '<div class="ai-text">' + formatAi(a.plan) + "</div>" : a.busy ? "" : '<p class="muted small" style="margin:8px 0 0">A step-by-step plan for your gaps, with article references and timeframes.</p>') +
+      "</div>";
+    html += '<div class="card no-print" style="margin-top:14px"><h3>Ask about your result</h3><div class="chat" id="chat-log">' +
+      (a.messages.length ? a.messages.map(function (m) {
+        return '<div class="msg msg-' + m.role + '">' + (m.role === "user" ? esc(m.content) : formatAi(m.content)) + "</div>";
+      }).join("") : '<div class="btn-row">' + AI_SUGGESTIONS.map(function (s) {
+        return '<button class="chip suggest" data-action="ai-suggest" data-text="' + esc(s) + '">' + esc(s) + "</button>";
+      }).join("") + "</div>") +
+      (a.busy === "chat" ? '<div class="msg msg-assistant muted ai-wait">Thinking…</div>' : "") + "</div>" +
+      '<div class="chat-input"><input id="ai-input" type="text" maxlength="2000" placeholder="Ask a question about your gaps or obligations"' + (a.busy ? " disabled" : "") + ">" +
+      '<button class="btn btn-primary" data-action="ai-send"' + (a.busy ? " disabled" : "") + ">Send</button></div></div>";
+    if (a.error) html += '<div class="alert alert-critical no-print" style="margin-top:14px">' + esc(a.error) + "</div>";
+    return html;
+  }
+
+  function refreshAi() {
+    var el = document.getElementById("ai-panel");
+    if (!el) return;
+    el.innerHTML = aiHtml();
+    var log = document.getElementById("chat-log");
+    if (log) log.scrollTop = log.scrollHeight;
+  }
+
+  function aiPlan() {
+    var r = window.Engine.evaluate(state);
+    ui.ai.busy = "plan"; ui.ai.error = ""; refreshAi();
+    callAi("/plan", { context: aiContext(r) }).then(function (d) { ui.ai.plan = d.plan || ""; },
+      function (e) { ui.ai.error = e.message; }).finally(function () { ui.ai.busy = ""; refreshAi(); });
+  }
+
+  function aiSend(text) {
+    text = (text || "").trim();
+    if (!text || ui.ai.busy) return;
+    var r = window.Engine.evaluate(state);
+    ui.ai.messages.push({ role: "user", content: text.slice(0, 2000) });
+    ui.ai.busy = "chat"; ui.ai.error = ""; refreshAi();
+    callAi("/chat", { context: aiContext(r), messages: ui.ai.messages.slice(-12) }).then(function (d) {
+      ui.ai.messages.push({ role: "assistant", content: d.reply || "" });
+    }, function (e) {
+      ui.ai.messages.pop();
+      ui.ai.error = e.message;
+    }).finally(function () { ui.ai.busy = ""; refreshAi(); var i = document.getElementById("ai-input"); if (i) i.focus(); });
   }
 
   function gapsHtml(r) {
@@ -528,6 +632,8 @@
       "<li><b>Tamper-evident audit trail</b>, <b>risk routing</b> to human oversight, <b>trust states</b> with a fixed remediation rule, and <b>safe re-certification</b> after drift.</li></ul>" +
       "<p>These questions go beyond the legal minimum, so their gaps are rated one level lower than legal gaps. The <b>Coverage</b> tab shows how much of your compliance is enforced on paper, on every decision, by people, and after release, and which runtime threats remain open.</p>" +
       "<p class=\"small muted\">Method based on: M. Hassan, B. Sardar, S. Islam, S. Silvestri, F. Fiori, D. Di Stasio, D. Amelin, <i>Governing High-Risk AI at Runtime: Reasoning Guards, Behavioural Attestation and Trust-Based Remediation</i>.</p>" +
+      (aiEnabled() ? "<h2>AI assistant (optional)</h2><p>On the results page, the AI Assistant tab can write a remediation plan and answer questions about your result. It runs on a Hugging Face Space using the open Qwen 2.5 model. " +
+        "Only when you click a button, it receives your framework, risk level, scores and top 15 gaps. Your system name, organisation and notes are never sent, and the service stores nothing. AI answers can be wrong; check them before acting.</p>" : "") +
       "<h2>5. Outputs</h2><ul><li>Overall and per-framework score, and a score per category.</li><li>Gap list with article or subcategory references and a recommended action for each.</li>" +
       "<li>A three-phase remediation roadmap (30, 90 and 180 days) ordered by severity.</li><li>A checklist of the documents you need to show for each applicable obligation.</li>" +
       "<li>Export as PDF (print), JSON (full data) or CSV (gap list).</li></ul>" +
@@ -554,7 +660,7 @@
       go(state.screeningDone && screeningComplete() ? "#/assess/0" : "#/screening");
     } else if (action === "reset") {
       if (!window.confirm("Clear all answers and start a new assessment?")) return;
-      state = blank(); ui.framework = null; ui.tab = "overview"; ui.gapFilter = "all";
+      state = blank(); ui.framework = null; ui.tab = "overview"; ui.gapFilter = "all"; ui.ai = { plan: "", messages: [], busy: "", error: "" };
       save(); go("#/");
     } else if (action === "screen") {
       state.screening[el.getAttribute("data-q")] = el.getAttribute("data-v");
@@ -583,6 +689,13 @@
       ui.gapFilter = el.getAttribute("data-sev");
       document.querySelectorAll("[data-action=filter]").forEach(function (b) { b.setAttribute("aria-pressed", String(b === el)); });
       document.querySelectorAll(".gap[data-sev]").forEach(function (g) { g.hidden = ui.gapFilter !== "all" && g.getAttribute("data-sev") !== ui.gapFilter; });
+    } else if (action === "ai-plan") {
+      aiPlan();
+    } else if (action === "ai-send") {
+      var input = document.getElementById("ai-input");
+      aiSend(input && input.value);
+    } else if (action === "ai-suggest") {
+      aiSend(el.getAttribute("data-text"));
     } else if (action === "print") {
       window.print();
     } else if (action === "export-csv") {
@@ -595,6 +708,7 @@
   app.addEventListener("keydown", function (e) {
     var el = e.target.closest("[data-action=pick-fw]");
     if (el && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); el.click(); }
+    if (e.target.id === "ai-input" && e.key === "Enter") { e.preventDefault(); aiSend(e.target.value); }
   });
 
   app.addEventListener("change", function (e) {

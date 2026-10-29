@@ -38,6 +38,12 @@ The questions live in plain data files, so they are easy to edit:
 
 Each question has an `id`, `text`, `ref` (article or subcategory), `weight` (1-3), `guidance` (the recommended action) and an optional `na: true` to allow "Not applicable".
 
+## AI assistant (optional)
+
+The results page can show an **AI Assistant** tab that writes a remediation plan and answers questions about the result. It calls a small backend on a Hugging Face Space (open Qwen 2.5 7B model). Set its address in `assets/js/config.js`; when `aiEndpoint` is empty the tab is hidden and nothing is ever sent.
+
+Only the framework, risk level, scores and top 15 gaps are sent, and only when the user clicks. The system name, organisation and notes are never sent.
+
 ## Scoring
 
 ```
@@ -75,6 +81,7 @@ The empty `.nojekyll` file tells GitHub Pages to serve the files as they are.
 ```
 index.html                  page shell
 assets/css/styles.css       styles (light and dark theme, print layout for PDF)
+assets/js/config.js         site settings (AI assistant address)
 assets/js/data/eu-ai-act.js EU AI Act question bank and screening
 assets/js/data/nist-ai-rmf.js NIST AI RMF question bank
 assets/js/data/runtime-assurance.js Runtime Assurance question bank and threats
