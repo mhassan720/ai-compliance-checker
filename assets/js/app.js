@@ -104,6 +104,19 @@
   }
   window.addEventListener("hashchange", function () { route(); window.scrollTo(0, 0); });
 
+  // Another tab saved answers: reload them so this tab never writes back stale data.
+  window.addEventListener("storage", function (e) {
+    if (e.key !== STORAGE_KEY && e.key !== null) return;
+    var active = document.activeElement;
+    var editing = active && (active.hasAttribute("data-note") || active.hasAttribute("data-meta"));
+    state = load();
+    ui.framework = state.framework;
+    if (editing) return; // keep the text field the user is typing in; it re-renders on next navigation
+    var y = window.scrollY;
+    route();
+    window.scrollTo(0, y);
+  });
+
   // ---------- Home ----------
   var CARDS = [
     { id: "eu", kicker: "EU regulation", title: "EU AI Act", text: "Legally binding rules for AI placed on the EU market or used in the EU, with obligations scaled to risk.",
