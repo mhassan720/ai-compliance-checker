@@ -13,7 +13,7 @@ window.FRAMEWORKS.nist = {
   sourceUrl: "https://www.nist.gov/itl/ai-risk-management-framework",
   sections: [
     {
-      id: "gv-1", group: "GOVERN", title: "Policies, Processes & Procedures", articles: "GOVERN 1", applies: "all",
+      id: "gv-1", layer: "lifecycle", group: "GOVERN", title: "Policies, Processes & Procedures", articles: "GOVERN 1", applies: "all",
       description: "Policies, processes and practices for mapping, measuring and managing AI risks are in place, transparent and implemented.",
       evidence: ["AI governance policy", "AI system inventory"],
       questions: [
@@ -27,7 +27,7 @@ window.FRAMEWORKS.nist = {
       ]
     },
     {
-      id: "gv-2", group: "GOVERN", title: "Accountability Structures", articles: "GOVERN 2", applies: "all",
+      id: "gv-2", layer: "lifecycle", group: "GOVERN", title: "Accountability Structures", articles: "GOVERN 2", applies: "all",
       description: "Teams and individuals are empowered, responsible and trained for mapping, measuring and managing AI risks.",
       evidence: ["AI roles and responsibilities (RACI)", "AI risk training records"],
       questions: [
@@ -37,7 +37,7 @@ window.FRAMEWORKS.nist = {
       ]
     },
     {
-      id: "gv-3", group: "GOVERN", title: "Workforce Diversity & Oversight Roles", articles: "GOVERN 3", applies: "all",
+      id: "gv-3", layer: "human", group: "GOVERN", title: "Workforce Diversity & Oversight Roles", articles: "GOVERN 3", applies: "all",
       description: "Diversity, equity, inclusion and accessibility are prioritised in mapping, measuring and managing AI risks.",
       evidence: ["Human-AI oversight role definitions"],
       questions: [
@@ -46,7 +46,7 @@ window.FRAMEWORKS.nist = {
       ]
     },
     {
-      id: "gv-4", group: "GOVERN", title: "Risk Culture", articles: "GOVERN 4", applies: "all",
+      id: "gv-4", layer: "lifecycle", group: "GOVERN", title: "Risk Culture", articles: "GOVERN 4", applies: "all",
       description: "Teams are committed to a culture that considers and communicates AI risk.",
       evidence: ["AI incident and testing practices"],
       questions: [
@@ -56,7 +56,7 @@ window.FRAMEWORKS.nist = {
       ]
     },
     {
-      id: "gv-5", group: "GOVERN", title: "Engagement with AI Actors", articles: "GOVERN 5", applies: "all",
+      id: "gv-5", layer: "lifecycle", group: "GOVERN", title: "Engagement with AI Actors", articles: "GOVERN 5", applies: "all",
       description: "Processes are in place for robust engagement with relevant AI actors.",
       evidence: ["Stakeholder feedback procedure"],
       questions: [
@@ -65,7 +65,7 @@ window.FRAMEWORKS.nist = {
       ]
     },
     {
-      id: "gv-6", group: "GOVERN", title: "Third-Party Risk", articles: "GOVERN 6", applies: "all",
+      id: "gv-6", layer: "lifecycle", group: "GOVERN", title: "Third-Party Risk", articles: "GOVERN 6", applies: "all",
       description: "Policies address AI risks from third-party software, data and supply chains.",
       evidence: ["Third-party AI risk assessments", "Third-party contingency plan"],
       questions: [
@@ -74,7 +74,7 @@ window.FRAMEWORKS.nist = {
       ]
     },
     {
-      id: "mp-1", group: "MAP", title: "Context Is Established", articles: "MAP 1", applies: "all",
+      id: "mp-1", layer: "lifecycle", group: "MAP", title: "Context Is Established", articles: "MAP 1", applies: "all",
       description: "Context is established and understood.",
       evidence: ["AI system context and intended-use statement"],
       questions: [
@@ -87,7 +87,7 @@ window.FRAMEWORKS.nist = {
       ]
     },
     {
-      id: "mp-2", group: "MAP", title: "System Categorisation", articles: "MAP 2", applies: "all",
+      id: "mp-2", layer: "lifecycle", group: "MAP", title: "System Categorisation", articles: "MAP 2", applies: "all",
       description: "The AI system is categorised.",
       evidence: ["System categorisation and limitations record"],
       questions: [
@@ -97,7 +97,7 @@ window.FRAMEWORKS.nist = {
       ]
     },
     {
-      id: "mp-3", group: "MAP", title: "Capabilities, Benefits & Costs", articles: "MAP 3", applies: "all",
+      id: "mp-3", layer: "lifecycle", group: "MAP", title: "Capabilities, Benefits & Costs", articles: "MAP 3", applies: "all",
       description: "AI capabilities, targeted usage, goals, and expected benefits and costs are understood.",
       evidence: ["Benefit and cost analysis", "Operator proficiency requirements"],
       questions: [
@@ -109,7 +109,7 @@ window.FRAMEWORKS.nist = {
       ]
     },
     {
-      id: "mp-4", group: "MAP", title: "Component Risks", articles: "MAP 4", applies: "all",
+      id: "mp-4", layer: "lifecycle", group: "MAP", title: "Component Risks", articles: "MAP 4", applies: "all",
       description: "Risks and benefits are mapped for all components, including third-party software and data.",
       evidence: ["Component and third-party risk map"],
       questions: [
@@ -118,7 +118,7 @@ window.FRAMEWORKS.nist = {
       ]
     },
     {
-      id: "mp-5", group: "MAP", title: "Impacts", articles: "MAP 5", applies: "all",
+      id: "mp-5", layer: "lifecycle", group: "MAP", title: "Impacts", articles: "MAP 5", applies: "all",
       description: "Impacts to individuals, groups, communities, organisations and society are characterised.",
       evidence: ["Impact assessment"],
       questions: [
@@ -127,7 +127,7 @@ window.FRAMEWORKS.nist = {
       ]
     },
     {
-      id: "ms-1", group: "MEASURE", title: "Methods & Metrics", articles: "MEASURE 1", applies: "all",
+      id: "ms-1", layer: "lifecycle", group: "MEASURE", title: "Methods & Metrics", articles: "MEASURE 1", applies: "all",
       description: "Appropriate methods and metrics are identified and applied.",
       evidence: ["AI risk metrics plan"],
       questions: [
@@ -137,7 +137,7 @@ window.FRAMEWORKS.nist = {
       ]
     },
     {
-      id: "ms-2", group: "MEASURE", title: "Trustworthiness Evaluation", articles: "MEASURE 2", applies: "all",
+      id: "ms-2", layer: "lifecycle", group: "MEASURE", title: "Trustworthiness Evaluation", articles: "MEASURE 2", applies: "all",
       description: "AI systems are evaluated for trustworthy characteristics.",
       evidence: ["TEVV test report", "Security and resilience assessment", "Privacy risk assessment", "Fairness and bias evaluation"],
       questions: [
@@ -157,7 +157,7 @@ window.FRAMEWORKS.nist = {
       ]
     },
     {
-      id: "ms-3", group: "MEASURE", title: "Tracking Risks Over Time", articles: "MEASURE 3", applies: "all",
+      id: "ms-3", layer: "continuous", group: "MEASURE", title: "Tracking Risks Over Time", articles: "MEASURE 3", applies: "all",
       description: "Mechanisms for tracking identified AI risks over time are in place.",
       evidence: ["Risk tracking log", "User feedback and appeal process"],
       questions: [
@@ -167,7 +167,7 @@ window.FRAMEWORKS.nist = {
       ]
     },
     {
-      id: "ms-4", group: "MEASURE", title: "Measurement Feedback", articles: "MEASURE 4", applies: "all",
+      id: "ms-4", layer: "continuous", group: "MEASURE", title: "Measurement Feedback", articles: "MEASURE 4", applies: "all",
       description: "Feedback about the efficacy of measurement is gathered and assessed.",
       evidence: ["Domain expert review records"],
       questions: [
@@ -177,7 +177,7 @@ window.FRAMEWORKS.nist = {
       ]
     },
     {
-      id: "mg-1", group: "MANAGE", title: "Risk Prioritisation & Response", articles: "MANAGE 1", applies: "all",
+      id: "mg-1", layer: "lifecycle", group: "MANAGE", title: "Risk Prioritisation & Response", articles: "MANAGE 1", applies: "all",
       description: "AI risks from MAP and MEASURE are prioritised, responded to and managed.",
       evidence: ["Go / no-go decision record", "Risk treatment plan"],
       questions: [
@@ -188,7 +188,7 @@ window.FRAMEWORKS.nist = {
       ]
     },
     {
-      id: "mg-2", group: "MANAGE", title: "Maximising Benefits & Minimising Harms", articles: "MANAGE 2", applies: "all",
+      id: "mg-2", layer: "continuous", group: "MANAGE", title: "Maximising Benefits & Minimising Harms", articles: "MANAGE 2", applies: "all",
       description: "Strategies to maximise benefits and minimise negative impacts are planned and documented.",
       evidence: ["Incident response plan", "Deactivation procedure"],
       questions: [
@@ -199,7 +199,7 @@ window.FRAMEWORKS.nist = {
       ]
     },
     {
-      id: "mg-3", group: "MANAGE", title: "Third-Party Risk Management", articles: "MANAGE 3", applies: "all",
+      id: "mg-3", layer: "continuous", group: "MANAGE", title: "Third-Party Risk Management", articles: "MANAGE 3", applies: "all",
       description: "AI risks and benefits from third-party entities are managed.",
       evidence: ["Third-party AI monitoring records"],
       questions: [
@@ -208,7 +208,7 @@ window.FRAMEWORKS.nist = {
       ]
     },
     {
-      id: "mg-4", group: "MANAGE", title: "Post-Deployment Monitoring & Communication", articles: "MANAGE 4", applies: "all",
+      id: "mg-4", layer: "continuous", group: "MANAGE", title: "Post-Deployment Monitoring & Communication", articles: "MANAGE 4", applies: "all",
       description: "Risk treatments, response and recovery, and communication plans are documented and monitored.",
       evidence: ["Post-deployment monitoring plan", "Incident communication procedure"],
       questions: [

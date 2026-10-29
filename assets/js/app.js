@@ -6,7 +6,7 @@
   "use strict";
 
   var STORAGE_KEY = "aicc:v1";
-  var NIST_SCREENING = ["sc-use", "sc-annex1", "sc-significant"];
+  var NIST_SCREENING = ["sc-use", "sc-annex1", "sc-runtime", "sc-significant"];
   var app = document.getElementById("app");
   var state = load();
   var ui = { framework: state.framework, gapFilter: "all", tab: "overview" };
@@ -56,6 +56,14 @@
   }
   function fillClass(score) {
     return score >= 80 ? "fill-good" : score >= 60 ? "fill-medium" : score >= 40 ? "fill-high" : "fill-critical";
+  }
+  function groupLabel(fwName, group) {
+    return state.framework === "both" && group !== fwName ? fwName + " · " + group : group;
+  }
+  function statusChip(status) {
+    if (status === "voluntary") return '<span class="chip sev-low">Voluntary best practice</span>';
+    if (status === "assurance") return '<span class="chip chip-accent">Runtime Assurance · beyond the legal minimum</span>';
+    return '<span class="chip sev-good">Applies to you</span>';
   }
   function fwLabel(id) {
     return { eu: "EU AI Act", nist: "NIST AI RMF", both: "EU AI Act + NIST AI RMF" }[id] || "";
@@ -137,6 +145,7 @@
       "<h1>Check your AI system's compliance readiness</h1>" +
       '<p class="lead">Classify your AI system\'s risk, answer targeted questions, and get a score, a gap analysis with article references, a remediation roadmap and a document checklist.</p>' +
       '<div class="trust-row"><span>Runs entirely in your browser</span><span>Answers are never uploaded</span><span>Export to PDF, JSON or CSV</span></div>' +
+      '<p class="muted small" style="margin-top:14px">New: an optional <a href="#/about">Runtime Assurance module</a> checks whether your controls are enforced on every decision, not only documented.</p>' +
       "</section>";
 
     if (hasProgress) {
@@ -265,7 +274,7 @@
         return '<option value="' + i + '"' + (i === index ? " selected" : "") + ">" + (i + 1) + ". " + esc(it.section.title) + " (" + answeredIn(it.section) + "/" + it.section.questions.length + ")</option>";
       }).join("") + "</select></div>" +
       '<div class="sec-head"><span class="chip chip-accent">' + esc(item.fw.name) + " · " + esc(sec.articles) + "</span>" +
-      (item.status === "voluntary" ? '<span class="chip sev-low">Voluntary best practice</span>' : '<span class="chip sev-good">Applies to you</span>') +
+      statusChip(item.status) +
       '</div><h2 style="margin-top:8px">' + esc(sec.title) + '</h2><p class="muted">' + esc(sec.description) + "</p>" +
       '<div class="q-list">' + sec.questions.map(function (q, i) { return questionHtml(q, i + 1); }).join("") + "</div>" +
       '<div class="nav-row">' +
@@ -280,7 +289,7 @@
   function sidebarHtml(items, index) {
     var html = "", lastGroup = "";
     items.forEach(function (it, i) {
-      var g = (state.framework === "both" ? it.fw.name + " · " : "") + it.section.group;
+      var g = groupLabel(it.fw.name, it.section.group);
       if (g !== lastGroup) { html += "<h4>" + esc(g) + "</h4>"; lastGroup = g; }
       var done = answeredIn(it.section), total = it.section.questions.length;
       html += '<a class="side-link' + (i === index ? " active" : "") + '" href="#/assess/' + i + '">' + ring(done, total) +
@@ -364,12 +373,13 @@
         return '<div class="stat sev-' + s + '"><b>' + r.gapCounts[s] + "</b><span>" + s + "</span></div>";
       }).join("") + "</div></div></div>";
 
-    var tabs = [["overview", "Overview"], ["gaps", "Gaps (" + r.gaps.length + ")"], ["roadmap", "Roadmap"], ["documents", "Documents (" + r.documents.length + ")"]];
+    var tabs = [["overview", "Overview"], ["coverage", "Coverage"], ["gaps", "Gaps (" + r.gaps.length + ")"], ["roadmap", "Roadmap"], ["documents", "Documents (" + r.documents.length + ")"]];
     html += '<div class="tabs" role="tablist">' + tabs.map(function (t) {
       return '<button role="tab" aria-selected="' + (ui.tab === t[0]) + '" data-action="tab" data-tab="' + t[0] + '">' + t[1] + "</button>";
     }).join("") + "</div>";
 
     html += panel("overview", "Score by category", overviewHtml(r)) +
+      panel("coverage", "Where your controls are enforced", coverageHtml(r)) +
       panel("gaps", "Gap analysis", gapsHtml(r)) +
       panel("roadmap", "Remediation roadmap", roadmapHtml(r)) +
       panel("documents", "Required documentation", documentsHtml(r));
@@ -386,10 +396,10 @@
   function overviewHtml(r) {
     var html = '<div class="card"><div class="bars">', last = "";
     r.sections.forEach(function (s) {
-      var g = (r.frameworks.length > 1 ? s.fwName + " · " : "") + s.group;
+      var g = groupLabel(s.fwName, s.group);
       if (g !== last) { html += '<div class="bar-group">' + esc(g) + "</div>"; last = g; }
       var score = s.score === null ? 0 : s.score;
-      html += '<div class="bar-row"><span class="lbl" title="' + esc(s.title) + '">' + esc(s.title) + (s.status === "voluntary" ? "<small>voluntary</small>" : "") + "</span>" +
+      html += '<div class="bar-row"><span class="lbl" title="' + esc(s.title) + '">' + esc(s.title) + (s.status === "voluntary" ? "<small>voluntary</small>" : s.status === "assurance" ? "<small>assurance</small>" : "") + "</span>" +
         '<div class="bar"><span class="' + fillClass(score) + '" style="width:' + score + '%"></span></div><span class="v">' + (s.score === null ? "n/a" : s.score + "%") + "</span></div>";
     });
     html += "</div></div>";
@@ -397,6 +407,39 @@
       html += '<div class="card" style="margin-top:14px"><h3>Strengths</h3><p class="muted small">Categories at 80% or above.</p><div class="btn-row">' +
         r.strengths.map(function (s) { return '<span class="chip sev-good">✓ ' + esc(s) + "</span>"; }).join("") + "</div></div>";
     }
+    return html;
+  }
+
+  function coverageHtml(r) {
+    var byId = {};
+    r.layers.forEach(function (l) { byId[l.id] = l; });
+    var paper = byId.lifecycle, run = byId.runtime;
+    var hasRt = r.frameworks.some(function (f) { return f.id === "rt"; });
+    var lead = paper.share + "% of what you were assessed on is enforced on paper (documents, processes, tests before release). " +
+      (run.score === null ? "Nothing is checked automatically on each decision." :
+        "Checks on every decision score " + run.score + "%.");
+    var html = '<div class="card"><p style="margin:0"><b>' + esc(lead) + "</b></p>" +
+      '<p class="muted small" style="margin:6px 0 0">A checklist shows what is documented. Runtime controls show what is enforced and evidenced on each decision while the system runs.' +
+      (hasRt ? "" : ' To assess runtime controls, answer <b>Yes</b> to the screening question about decisions made while the system runs. <a href="#/screening">Edit screening</a>') + "</p></div>";
+
+    html += '<div class="layers">' + r.layers.map(function (l) {
+      var sc = l.score === null ? 0 : l.score;
+      return '<div class="card layer"><div class="muted small">' + esc(l.description) + "</div><h3>" + esc(l.label) + "</h3>" +
+        '<div class="layer-score">' + (l.score === null ? "n/a" : l.score + "%") + "</div>" +
+        '<div class="bar"><span class="' + fillClass(sc) + '" style="width:' + sc + '%"></span></div>' +
+        '<div class="muted small" style="margin-top:6px">' + l.questions + " questions · " + l.share + "% of total weight</div></div>";
+    }).join("") + "</div>";
+
+    var label = { covered: ["sev-good", "Covered"], partial: ["sev-medium", "Partly covered"], open: ["sev-critical", "Not covered"], "not-assessed": ["", "Not assessed"] };
+    html += '<div class="card" style="margin-top:14px;overflow-x:auto"><h3>Threat coverage</h3>' +
+      '<p class="muted small">Threats a high-risk decision system faces at runtime, and whether your answers cover them. A threat is covered when every related question that applies to you is answered Yes.</p>' +
+      '<table class="doc-table"><thead><tr><th>Threat</th><th>Status</th><th>Related questions not yet Yes</th></tr></thead><tbody>' +
+      r.threats.map(function (t) {
+        var l = label[t.status];
+        return "<tr><td>" + esc(t.name) + '</td><td><span class="chip ' + l[0] + '">' + l[1] + '</span></td><td class="muted">' +
+          (t.status === "not-assessed" ? "None of its questions apply to this assessment" : t.missing.length ? esc(t.missing.join(", ")) : "None") + "</td></tr>";
+      }).join("") + "</tbody></table>" +
+      '<p class="muted small" style="margin:10px 0 0">Out of scope for runtime checks: a manipulation that keeps the whole behavioural fingerprint unchanged, a model already compromised before certification, and subversion of the trusted computing base. These need offline attestation.</p></div>';
     return html;
   }
 
@@ -477,7 +520,15 @@
       "<li>Weight 2: <b>high</b> for high-risk systems, otherwise <b>medium</b>.</li>" +
       "<li>Weight 1: <b>medium</b> for high-risk systems, otherwise <b>low</b>.</li>" +
       "<li>A Partially answer lowers severity by one level; voluntary sections by two.</li></ul>" +
-      "<h2>4. Outputs</h2><ul><li>Overall and per-framework score, and a score per category.</li><li>Gap list with article or subcategory references and a recommended action for each.</li>" +
+      "<h2>4. Runtime Assurance module</h2>" +
+      "<p>A checklist shows what is documented, not what the system actually does on each decision. When you answer Yes to the screening question about decisions made while the system runs, 33 extra questions check whether the obligations of Articles 10, 12, 13, 14 and 15 are enforced and evidenced on every decision:</p><ul>" +
+      "<li><b>Per-decision guards</b>: input screening, counterfactual non-discrimination, data minimisation, precondition proof and groundedness.</li>" +
+      "<li><b>Reasoning faithfulness</b>: the stated reasons must be the reasons that produced the decision.</li>" +
+      "<li><b>Model integrity attestation</b>: the running model must behave like the model that was approved.</li>" +
+      "<li><b>Tamper-evident audit trail</b>, <b>risk routing</b> to human oversight, <b>trust states</b> with a fixed remediation rule, and <b>safe re-certification</b> after drift.</li></ul>" +
+      "<p>These questions go beyond the legal minimum, so their gaps are rated one level lower than legal gaps. The <b>Coverage</b> tab shows how much of your compliance is enforced on paper, on every decision, by people, and after release, and which runtime threats remain open.</p>" +
+      "<p class=\"small muted\">Method based on: M. Hassan, B. Sardar, S. Islam, S. Silvestri, F. Fiori, D. Di Stasio, D. Amelin, <i>Governing High-Risk AI at Runtime: Reasoning Guards, Behavioural Attestation and Trust-Based Remediation</i>.</p>" +
+      "<h2>5. Outputs</h2><ul><li>Overall and per-framework score, and a score per category.</li><li>Gap list with article or subcategory references and a recommended action for each.</li>" +
       "<li>A three-phase remediation roadmap (30, 90 and 180 days) ordered by severity.</li><li>A checklist of the documents you need to show for each applicable obligation.</li>" +
       "<li>Export as PDF (print), JSON (full data) or CSV (gap list).</li></ul>" +
       "<h2>Sources</h2><ul>" +

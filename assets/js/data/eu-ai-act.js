@@ -9,6 +9,8 @@
  *   "transparency" systems that interact with people or generate content (Art. 50)
  *   "gpai"         providers of general-purpose AI models (Chapter V)
  *   "fria"         deployers that must run a fundamental rights impact assessment (Art. 27)
+ * layer: where the obligation is enforced: "lifecycle" (documents and processes), "runtime"
+ *   (every decision), "human" (human oversight) or "continuous" (monitoring after release).
  * roles: if set, the section is only mandatory for these roles (others see it as voluntary).
  * na: true lets the user answer "Not applicable".
  */
@@ -21,7 +23,7 @@ window.FRAMEWORKS.eu = {
   sourceUrl: "https://eur-lex.europa.eu/eli/reg/2024/1689/oj",
   sections: [
     {
-      id: "eu-lit",
+      id: "eu-lit", layer: "lifecycle",
       group: "Applies to every system",
       title: "AI Literacy",
       articles: "Art. 4",
@@ -34,7 +36,7 @@ window.FRAMEWORKS.eu = {
       ]
     },
     {
-      id: "eu-pp",
+      id: "eu-pp", layer: "lifecycle",
       group: "Applies to every system",
       title: "Prohibited Practices",
       articles: "Art. 5",
@@ -51,7 +53,7 @@ window.FRAMEWORKS.eu = {
       ]
     },
     {
-      id: "eu-rm",
+      id: "eu-rm", layer: "lifecycle",
       group: "High-risk requirements",
       title: "Risk Management System",
       articles: "Art. 9",
@@ -68,7 +70,7 @@ window.FRAMEWORKS.eu = {
       ]
     },
     {
-      id: "eu-dg",
+      id: "eu-dg", layer: "lifecycle",
       group: "High-risk requirements",
       title: "Data & Data Governance",
       articles: "Art. 10",
@@ -85,7 +87,7 @@ window.FRAMEWORKS.eu = {
       ]
     },
     {
-      id: "eu-td",
+      id: "eu-td", layer: "lifecycle",
       group: "High-risk requirements",
       title: "Technical Documentation",
       articles: "Art. 11, 18, Annex IV",
@@ -101,7 +103,7 @@ window.FRAMEWORKS.eu = {
       ]
     },
     {
-      id: "eu-rk",
+      id: "eu-rk", layer: "runtime",
       group: "High-risk requirements",
       title: "Record-Keeping & Logging",
       articles: "Art. 12, 19, 26(6)",
@@ -116,7 +118,7 @@ window.FRAMEWORKS.eu = {
       ]
     },
     {
-      id: "eu-tr",
+      id: "eu-tr", layer: "lifecycle",
       group: "High-risk requirements",
       title: "Transparency & Instructions for Use",
       articles: "Art. 13",
@@ -132,7 +134,7 @@ window.FRAMEWORKS.eu = {
       ]
     },
     {
-      id: "eu-ho",
+      id: "eu-ho", layer: "human",
       group: "High-risk requirements",
       title: "Human Oversight",
       articles: "Art. 14",
@@ -149,7 +151,7 @@ window.FRAMEWORKS.eu = {
       ]
     },
     {
-      id: "eu-ar",
+      id: "eu-ar", layer: "lifecycle",
       group: "High-risk requirements",
       title: "Accuracy, Robustness & Cybersecurity",
       articles: "Art. 15",
@@ -165,7 +167,7 @@ window.FRAMEWORKS.eu = {
       ]
     },
     {
-      id: "eu-qms",
+      id: "eu-qms", layer: "lifecycle",
       roles: ["provider", "both"],
       group: "Provider obligations",
       title: "Quality Management System",
@@ -181,7 +183,7 @@ window.FRAMEWORKS.eu = {
       ]
     },
     {
-      id: "eu-ca",
+      id: "eu-ca", layer: "lifecycle",
       roles: ["provider", "both"],
       group: "Provider obligations",
       title: "Conformity Assessment & Registration",
@@ -198,7 +200,7 @@ window.FRAMEWORKS.eu = {
       ]
     },
     {
-      id: "eu-pm",
+      id: "eu-pm", layer: "continuous",
       roles: ["provider", "both"],
       group: "Provider obligations",
       title: "Post-Market Monitoring & Incidents",
@@ -215,7 +217,7 @@ window.FRAMEWORKS.eu = {
       ]
     },
     {
-      id: "eu-fria",
+      id: "eu-fria", layer: "lifecycle",
       group: "Deployer obligations",
       title: "Fundamental Rights Impact Assessment",
       articles: "Art. 27",
@@ -230,7 +232,7 @@ window.FRAMEWORKS.eu = {
       ]
     },
     {
-      id: "eu-t50",
+      id: "eu-t50", layer: "runtime",
       group: "Transparency obligations",
       title: "Transparency to People",
       articles: "Art. 50",
@@ -245,7 +247,7 @@ window.FRAMEWORKS.eu = {
       ]
     },
     {
-      id: "eu-gpai",
+      id: "eu-gpai", layer: "lifecycle",
       group: "General-purpose AI models",
       title: "GPAI Model Obligations",
       articles: "Art. 53, 55",
@@ -352,6 +354,13 @@ window.SCREENING = [
     ref: "Art. 27(1)",
     text: "Are you a public body or a private entity providing public services, or will you deploy the system for credit scoring or life/health insurance pricing?",
     help: "These deployers of high-risk systems must carry out a fundamental rights impact assessment."
+  },
+  {
+    id: "sc-runtime",
+    type: "yesno",
+    ref: "Art. 12-15",
+    text: "Does the system make or recommend individual decisions while it runs, for example a model or LLM that scores, classifies or approves cases, possibly with a written rationale?",
+    help: "Yes adds the Runtime Assurance module, which checks whether controls are enforced on every decision, not only documented."
   },
   {
     id: "sc-significant",

@@ -19,12 +19,22 @@ Everything runs in the browser. Answers are stored only in `localStorage` and ne
 |---|---|---|
 | EU AI Act | 15 (Art. 4, 5, 9-15, 17, 20-21, 27, 43-49, 50, 53-55, 72-73) | 73, filtered by risk tier, role, GPAI and FRIA applicability |
 | NIST AI RMF | 19 categories across GOVERN, MAP, MEASURE, MANAGE | 72 (one per subcategory) |
-| Screening | — | 9 (not scored) |
+| Runtime Assurance (optional) | 8 (policy records, per-decision guards, reasoning faithfulness, model integrity, audit trail, risk routing, trust states, re-certification) | 33 |
+| Screening | — | 10 (not scored) |
+
+## Runtime Assurance module
+
+A checklist shows what is documented, not what the system does on each decision. When the screening question about decisions made at runtime is answered Yes, the Runtime Assurance module asks whether the obligations of Articles 10, 12, 13, 14 and 15 are enforced and evidenced on every decision. Its gaps are rated one level lower than legal gaps because it goes beyond the legal minimum.
+
+The **Coverage** tab then shows how much of the assessment is enforced on paper (lifecycle), on every decision (runtime), by people (human oversight) and after release (continuous), and which runtime threats are still open.
+
+The module is based on: M. Hassan, B. Sardar, S. Islam, S. Silvestri, F. Fiori, D. Di Stasio, D. Amelin, *Governing High-Risk AI at Runtime: Reasoning Guards, Behavioural Attestation and Trust-Based Remediation*.
 
 The questions live in plain data files, so they are easy to edit:
 
 - `assets/js/data/eu-ai-act.js`: EU sections, questions and screening
 - `assets/js/data/nist-ai-rmf.js`: NIST sections and questions
+- `assets/js/data/runtime-assurance.js`: Runtime Assurance sections, questions and threat list
 
 Each question has an `id`, `text`, `ref` (article or subcategory), `weight` (1-3), `guidance` (the recommended action) and an optional `na: true` to allow "Not applicable".
 
@@ -67,6 +77,7 @@ index.html                  page shell
 assets/css/styles.css       styles (light and dark theme, print layout for PDF)
 assets/js/data/eu-ai-act.js EU AI Act question bank and screening
 assets/js/data/nist-ai-rmf.js NIST AI RMF question bank
+assets/js/data/runtime-assurance.js Runtime Assurance question bank and threats
 assets/js/engine.js         risk classification and scoring (no DOM, testable in Node)
 assets/js/app.js            interface and routing
 ```
