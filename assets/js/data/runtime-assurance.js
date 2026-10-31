@@ -39,7 +39,7 @@ window.FRAMEWORKS.rt = {
         { id: "rt-2.3", weight: 2, ref: "Art. 10(5) · GDPR Art. 5(1)(c)", text: "Is personal data beyond what the decision needs masked before use, and do logs store only digests (hashes) of inputs rather than the raw data?", guidance: "Run a de-identification step on inputs and log sha256(input) instead of the input itself." },
         { id: "rt-2.4", weight: 3, ref: "Art. 12 · Paper §5.1", text: "Can you prove from a typed tool-call log that every required check ran before the action was taken (precondition compliance)?", guidance: "Log every tool and check call with a type and timestamp, and verify that the required set was called before the action token." },
         { id: "rt-2.5", weight: 3, ref: "Art. 15(1) · Paper §5.1", text: "Is every factual claim in the output checked against the retrieved evidence before release (groundedness)?", guidance: "Check each claim against its evidence with an entailment (NLI) model and withhold outputs below the calibrated threshold." },
-        { id: "rt-2.6", weight: 2, ref: "Art. 15 · NIST MEASURE 2.6", text: "Is every output screened by a safety classifier before release?", guidance: "Add a content-safety classifier as the last output check and log its verdict." }
+        { id: "rt-2.6", weight: 2, ref: "Art. 15", text: "Is every output screened by a safety classifier before release?", guidance: "Add a content-safety classifier as the last output check and log its verdict." }
       ]
     },
     {

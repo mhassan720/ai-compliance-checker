@@ -6,19 +6,18 @@
   "use strict";
 
   var STORAGE_KEY = "aicc:v1";
-  var NIST_SCREENING = ["sc-use", "sc-annex1", "sc-runtime", "sc-significant"];
   var app = document.getElementById("app");
   var state = load();
-  var ui = { framework: state.framework, gapFilter: "all", tab: "overview", ai: { plan: "", messages: [], busy: "", error: "" } };
+  var ui = { gapFilter: "all", tab: "overview", ai: { plan: "", messages: [], busy: "", error: "" } };
 
   // ---------- Persistence ----------
   function blank() {
-    return { version: 1, framework: null, screening: {}, answers: {}, notes: {}, meta: { system: "", org: "" }, includeVoluntary: true, screeningDone: false };
+    return { version: 1, framework: "eu", screening: {}, answers: {}, notes: {}, meta: { system: "", org: "" }, includeVoluntary: true, screeningDone: false };
   }
   function load() {
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) { var s = JSON.parse(raw); if (s && s.version === 1) return Object.assign(blank(), s); }
+      if (raw) { var s = JSON.parse(raw); if (s && s.version === 1) return Object.assign(blank(), s, { framework: "eu" }); }
     } catch (e) { /* storage unavailable: start fresh */ }
     return blank();
   }
@@ -34,7 +33,7 @@
     });
   }
   function screeningIds() {
-    return state.framework === "nist" ? NIST_SCREENING : window.SCREENING.map(function (q) { return q.id; });
+    return window.SCREENING.map(function (q) { return q.id; });
   }
   function screeningComplete() {
     return screeningIds().every(function (id) {
@@ -51,14 +50,13 @@
     return { total: total, done: done, pct: total ? Math.round(done / total * 100) : 0 };
   }
   function tierLabel(tier) {
-    if (state.framework === "nist") return tier === "high" || tier === "unacceptable" ? "High-impact use" : "Standard-impact use";
     return { unacceptable: "Unacceptable risk (prohibited)", high: "High-risk", limited: "Limited risk", minimal: "Minimal risk" }[tier];
   }
   function fillClass(score) {
     return score >= 80 ? "fill-good" : score >= 60 ? "fill-medium" : score >= 40 ? "fill-high" : "fill-critical";
   }
   function groupLabel(fwName, group) {
-    return state.framework === "both" && group !== fwName ? fwName + " · " + group : group;
+    return group;
   }
   function statusChip(status) {
     if (status === "voluntary") return '<span class="chip sev-low">Voluntary best practice</span>';
@@ -66,7 +64,7 @@
     return '<span class="chip sev-good">Applies to you</span>';
   }
   function fwLabel(id) {
-    return { eu: "EU AI Act", nist: "NIST AI RMF", both: "EU AI Act + NIST AI RMF" }[id] || "";
+    return "EU AI Act";
   }
   function ring(done, total) {
     var r = 8, c = 2 * Math.PI * r, p = total ? done / total : 0;
@@ -142,7 +140,6 @@
     var parts = hash.replace(/^#\/?/, "").split("/");
     var view = parts[0] || "home";
 
-    if ((view === "screening" || view === "assess" || view === "results") && !state.framework) return go("#/");
     if ((view === "assess" || view === "results") && !state.screeningDone) return go("#/screening");
 
     document.querySelectorAll("[data-nav]").forEach(function (a) {
@@ -166,7 +163,6 @@
     var active = document.activeElement;
     var editing = active && (active.hasAttribute("data-note") || active.hasAttribute("data-meta"));
     state = load();
-    ui.framework = state.framework;
     if (editing) return; // keep the text field the user is typing in; it re-renders on next navigation
     var y = window.scrollY;
     route();
@@ -175,31 +171,28 @@
 
   // ---------- Home ----------
   var CARDS = [
-    { id: "eu", kicker: "EU regulation", title: "EU AI Act", text: "Legally binding rules for AI placed on the EU market or used in the EU, with obligations scaled to risk.",
-      points: ["Risk-tier classification (Art. 5, 6, Annex III)", "Requirements for high-risk systems (Art. 9-17)", "Transparency, GPAI and FRIA duties", "Article-referenced gap analysis"], q: "Up to 73 questions", t: "~25 min" },
-    { id: "nist", kicker: "US framework (voluntary)", title: "NIST AI RMF", text: "The widely used voluntary framework for managing AI risk, across all four core functions.",
-      points: ["GOVERN, MAP, MEASURE, MANAGE", "All 72 subcategories covered", "Maturity view by category", "Good for vendor and client questionnaires"], q: "72 questions", t: "~25 min" },
-    { id: "both", kicker: "Comprehensive", title: "EU AI Act + NIST", text: "Legal compliance and risk-management best practice together. Recommended for organisations that sell into the EU.",
-      points: ["Everything in both assessments", "Separate and combined scores", "One remediation roadmap", "One document checklist"], q: "Up to 145 questions", t: "~50 min", badge: "Recommended" },
-    { id: "iso", kicker: "AI management system", title: "ISO/IEC 42001", text: "Assessment against the AI management system standard.", points: ["Clauses 4-10 and Annex A controls"], soon: true },
-    { id: "oecd", kicker: "Principles", title: "OECD AI Principles", text: "Alignment with the OECD principles for trustworthy AI.", points: ["Five values-based principles"], soon: true }
+    { kicker: "Step 1", title: "Risk classification", text: "Screening questions place the system in a risk tier and decide which obligations apply.",
+      points: ["Prohibited practices (Art. 5)", "High-risk areas (Art. 6, Annex I and III)", "Transparency duties (Art. 50)", "General-purpose AI models (Chapter V)"] },
+    { kicker: "Step 2", title: "Obligations questionnaire", text: "Only the questions that apply to your risk tier and role are asked.",
+      points: ["Provider and deployer obligations", "Requirements for high-risk systems (Art. 9-17)", "Fundamental rights impact assessment (Art. 27)", "Optional Runtime Assurance module"] },
+    { kicker: "Step 3", title: "Results and remediation", text: "A score, a gap analysis with article references and a plan to close the gaps.",
+      points: ["Score by obligation area", "Gaps ranked by severity", "30, 90 and 180 day roadmap", "Document checklist and PDF export"] }
   ];
 
   function renderHome() {
-    var hasProgress = state.framework && (state.screeningDone || Object.keys(state.answers).length > 0);
+    var hasProgress = state.screeningDone || Object.keys(state.answers).length > 0;
     var html = '<div class="container">' +
       '<section class="hero">' +
-      '<span class="chip chip-accent eyebrow">Free and open source · No account needed</span>' +
-      "<h1>Check your AI system's compliance readiness</h1>" +
-      '<p class="lead">Classify your AI system\'s risk, answer targeted questions, and get a score, a gap analysis with article references, a remediation roadmap and a document checklist.</p>' +
+      '<span class="chip chip-accent eyebrow">Regulation (EU) 2024/1689 · Free · No account needed</span>' +
+      "<h1>EU AI Act compliance checker</h1>" +
+      '<p class="lead">Classify your AI system under the EU AI Act, answer the questions that apply to you, and get a score, a gap analysis with article references, a remediation roadmap and a document checklist.</p>' +
       '<div class="trust-row"><span>Runs in your browser</span><span>Your answers stay on your device</span><span>Export to PDF, JSON or CSV</span>' + (aiEnabled() ? "<span>Optional AI assistant</span>" : "") + "</div>" +
-      '<p class="muted small" style="margin-top:14px">New: an optional <a href="#/about">Runtime Assurance module</a> checks whether your controls are enforced on every decision, not only documented.</p>' +
       "</section>";
 
     if (hasProgress) {
       var items = window.Engine.plan(state);
       var t = state.screeningDone ? totals(items) : { pct: 0 };
-      html += '<div class="card resume"><div><b>Continue your ' + esc(fwLabel(state.framework)) + " assessment</b>" +
+      html += '<div class="card resume"><div><b>Continue your EU AI Act assessment</b>' +
         (state.meta.system ? ' for <b>' + esc(state.meta.system) + "</b>" : "") +
         '<div class="muted small">' + (state.screeningDone ? t.pct + "% of questions answered" : "Screening not finished") + "</div></div>" +
         '<div class="btn-row">' +
@@ -208,22 +201,16 @@
         '<button class="btn btn-ghost" data-action="reset">Start over</button></div></div>';
     }
 
-    html += '<h2 style="margin-top:32px">Choose a framework</h2><p class="muted">Pick the standard you want to assess against. You can switch later without losing answers.</p>' +
-      '<div class="fw-grid" role="radiogroup" aria-label="Framework">';
+    html += '<h2 style="margin-top:32px">How the assessment works</h2><p class="muted">Up to 73 questions, about 25 minutes. You can stop at any time and continue later.</p>' +
+      '<div class="fw-grid">';
     CARDS.forEach(function (c) {
-      var sel = ui.framework === c.id;
-      html += '<div class="card fw-card' + (sel ? " selected" : "") + (c.soon ? " disabled" : "") + '" ' +
-        (c.soon ? 'aria-disabled="true"' : 'role="radio" tabindex="0" aria-checked="' + sel + '" data-action="pick-fw" data-fw="' + c.id + '"') + ">" +
-        (c.badge ? '<span class="chip chip-accent fw-badge">★ ' + c.badge + "</span>" : "") +
-        (c.soon ? '<span class="chip fw-badge">Coming soon</span>' : "") +
+      html += '<div class="card fw-card static">' +
         '<span class="kicker">' + c.kicker + "</span><h3>" + c.title + '</h3><p class="muted small" style="margin:0">' + c.text + "</p>" +
-        "<ul>" + c.points.map(function (p) { return "<li>" + p + "</li>"; }).join("") + "</ul>" +
-        (c.soon ? "" : '<div class="fw-meta"><span>' + c.q + "</span><span>" + c.t + "</span></div>") +
-        "</div>";
+        "<ul>" + c.points.map(function (p) { return "<li>" + p + "</li>"; }).join("") + "</ul></div>";
     });
     html += "</div>" +
-      '<div class="start-bar"><button class="btn btn-primary" data-action="start" ' + (ui.framework ? "" : "disabled") + '>Start assessment →</button>' +
-      '<span class="muted small">' + (ui.framework ? esc(fwLabel(ui.framework)) + " selected" : "Select a framework above to begin") + "</span></div></div>";
+      '<div class="start-bar"><button class="btn btn-primary" data-action="start">' + (hasProgress ? "Go to screening →" : "Start assessment →") + "</button>" +
+      '<span class="muted small">Your answers are saved in this browser only.</span></div></div>';
     app.innerHTML = html;
   }
 
@@ -263,21 +250,17 @@
     var qs = window.SCREENING.filter(function (q) { return ids.indexOf(q.id) !== -1; });
     var html = '<div class="container" style="max-width:860px"><div class="page-head">' + stepsHtml(2) +
       "<h1>System screening</h1><p class=\"muted\">" +
-      (state.framework === "nist"
-        ? "A few questions about how the system is used. They set the priority of any gaps found."
-        : "These questions classify your system's risk tier under the EU AI Act and decide which obligations apply. They are not part of the score.") +
+      "These questions classify your system's risk tier under the EU AI Act and decide which obligations apply. They are not part of the score." +
       '</p></div><div class="card"><div class="fields">' +
       '<div class="field"><label for="m-system">AI system name <span class="muted small">(optional)</span></label><input id="m-system" data-meta="system" value="' + esc(state.meta.system) + '" placeholder="e.g. Loan pre-screening model"></div>' +
       '<div class="field"><label for="m-org">Organisation <span class="muted small">(optional)</span></label><input id="m-org" data-meta="org" value="' + esc(state.meta.org) + '" placeholder="e.g. Acme Ltd"></div>' +
       '</div></div><div class="q-list">' + qs.map(function (q, i) { return screeningQuestionHtml(q, i + 1); }).join("") + "</div>";
 
-    if (state.framework !== "nist") {
-      html += '<div class="card" style="margin-bottom:16px"><label class="toggle"><input type="checkbox" data-action="voluntary"' + (state.includeVoluntary ? " checked" : "") + ">" +
-        "<span><b>Include best-practice sections that are not legally required for my tier</b><br><span class=\"muted small\">For example the high-risk requirements when your system is limited or minimal risk. They are marked voluntary and their gaps get a lower priority.</span></span></label></div>";
-    }
+    html += '<div class="card" style="margin-bottom:16px"><label class="toggle"><input type="checkbox" data-action="voluntary"' + (state.includeVoluntary ? " checked" : "") + ">" +
+      "<span><b>Include best-practice sections that are not legally required for my tier</b><br><span class=\"muted small\">For example the high-risk requirements when your system is limited or minimal risk. They are marked voluntary and their gaps get a lower priority.</span></span></label></div>";
 
     html += '<div id="tier-preview">' + tierPreviewHtml() + "</div>" +
-      '<div class="nav-row" style="margin:20px 0 48px"><a class="btn btn-ghost" href="#/">← Change framework</a>' +
+      '<div class="nav-row" style="margin:20px 0 48px"><a class="btn btn-ghost" href="#/">← Home</a>' +
       '<button class="btn btn-primary" data-action="screen-done"' + (screeningComplete() ? "" : " disabled") + ">Continue to assessment →</button></div></div>";
     app.innerHTML = html;
   }
@@ -294,7 +277,7 @@
   }
 
   function stepsHtml(active) {
-    var names = ["Framework", "Screening", "Assessment", "Results"];
+    var names = ["Start", "Screening", "Assessment", "Results"];
     return '<div class="steps">' + names.map(function (n, i) {
       return '<span class="' + (i + 1 === active ? "on" : "") + '">' + (i + 1 < active ? "✓ " : (i + 1) + ". ") + n + "</span>";
     }).join("<span>›</span>") + "</div>";
@@ -397,7 +380,7 @@
       '<button class="btn btn-sm" data-action="export-json">Export JSON</button>' +
       '<button class="btn btn-sm btn-primary" data-action="print">Download PDF</button></div></div>';
 
-    if (p.tier === "unacceptable" && state.framework !== "nist") {
+    if (p.tier === "unacceptable") {
       html += '<div class="alert alert-critical" style="margin-top:16px"><b>Prohibited practice identified (Art. 5)</b><p style="margin:6px 0 0">You indicated the system does something banned under the EU AI Act. It cannot be placed on the market or used in the EU in that form, whatever its score. Get legal advice and redesign or discontinue the affected functionality.</p></div>';
     }
     if (r.unanswered) {
@@ -411,7 +394,7 @@
       '<div class="val"><b>' + r.overall + '%</b><span>overall readiness</span></div></div>' +
       '<span class="chip ' + ({ strong: "sev-good", good: "chip-accent", developing: "sev-medium", early: "sev-critical" })[r.band.id] + '">' + r.band.label + "</span>" +
       "</div>" +
-      '<div class="card"><div class="muted small">' + (state.framework === "nist" ? "Risk context" : "EU AI Act risk classification") + "</div>" +
+      '<div class="card"><div class="muted small">' + "EU AI Act risk classification" + "</div>" +
       '<div style="margin:6px 0 4px"><span class="tier tier-' + p.tier + '">' + esc(tierLabel(p.tier)) + "</span></div>" +
       '<ul class="notes">' + p.basis.concat(p.notes).map(function (b) { return "<li>" + esc(b) + "</li>"; }).join("") + "</ul>" +
       (r.frameworks.length > 1 ? '<div class="fw-scores">' + r.frameworks.map(function (f) {
@@ -558,7 +541,7 @@
       var hidden = f !== "all" && g.severity !== f;
       html += '<div class="card gap" data-sev="' + g.severity + '"' + (hidden ? ' hidden' : "") + '><div class="gap-head">' +
         '<span class="chip sev-' + g.severity + '">' + g.severity.toUpperCase() + "</span>" +
-        '<span class="chip">' + esc(g.ref) + '</span><span class="muted small">' + esc(g.fwName) + " · " + esc(g.section) + "</span>" +
+        '<span class="chip">' + esc(g.ref) + '</span><span class="muted small">' + (g.fw === "rt" ? "Runtime Assurance · " : "") + esc(g.section) + "</span>" +
         '<span class="muted small" style="margin-left:auto">Answer: ' + ({ no: "No", partial: "Partially", unanswered: "Not answered" })[g.answer] + "</span></div>" +
         '<div class="gap-text">' + esc(g.text) + '</div><div class="gap-fix"><b>Recommended action:</b> ' + esc(g.guidance) + "</div>" +
         (state.notes[g.id] ? '<div class="gap-note">Your notes: ' + esc(state.notes[g.id]) + "</div>" : "") + "</div>";
@@ -634,12 +617,12 @@
       "<p class=\"small muted\">Method based on: M. Hassan, B. Sardar, S. Islam, S. Silvestri, F. Fiori, D. Di Stasio, D. Amelin, <i>Governing High-Risk AI at Runtime: Reasoning Guards, Behavioural Attestation and Trust-Based Remediation</i>.</p>" +
       (aiEnabled() ? "<h2>AI assistant (optional)</h2><p>On the results page, the AI Assistant tab can write a remediation plan and answer questions about your result. It runs on a Hugging Face Space using the open Qwen 2.5 model. " +
         "Only when you click a button, it receives your framework, risk level, scores and top 15 gaps. Your system name, organisation and notes are never sent, and the service stores nothing. AI answers can be wrong; check them before acting.</p>" : "") +
-      "<h2>5. Outputs</h2><ul><li>Overall and per-framework score, and a score per category.</li><li>Gap list with article or subcategory references and a recommended action for each.</li>" +
+      "<h2>5. Outputs</h2><ul><li>Overall score and a score per obligation area.</li><li>Gap list with article references and a recommended action for each.</li>" +
       "<li>A three-phase remediation roadmap (30, 90 and 180 days) ordered by severity.</li><li>A checklist of the documents you need to show for each applicable obligation.</li>" +
       "<li>Export as PDF (print), JSON (full data) or CSV (gap list).</li></ul>" +
       "<h2>Sources</h2><ul>" +
       '<li><a href="https://eur-lex.europa.eu/eli/reg/2024/1689/oj" target="_blank" rel="noopener">Regulation (EU) 2024/1689 (Artificial Intelligence Act)</a></li>' +
-      '<li><a href="https://www.nist.gov/itl/ai-risk-management-framework" target="_blank" rel="noopener">NIST AI Risk Management Framework 1.0 (NIST AI 100-1)</a></li></ul>' +
+      "</ul>" +
       "<h2>Disclaimer</h2><p>This tool is a self-assessment aid. It does not provide legal advice, and a good score does not certify compliance.</p>" +
       '<p><a class="btn btn-primary" href="#/">Start an assessment</a></p></div></div>';
   }
@@ -650,17 +633,13 @@
     if (!el) return;
     var action = el.getAttribute("data-action");
 
-    if (action === "pick-fw") {
-      ui.framework = el.getAttribute("data-fw");
-      renderHome();
-    } else if (action === "start") {
-      if (!ui.framework) return;
-      state.framework = ui.framework;
+    if (action === "start") {
+      state.framework = "eu";
       save();
       go(state.screeningDone && screeningComplete() ? "#/assess/0" : "#/screening");
     } else if (action === "reset") {
       if (!window.confirm("Clear all answers and start a new assessment?")) return;
-      state = blank(); ui.framework = null; ui.tab = "overview"; ui.gapFilter = "all"; ui.ai = { plan: "", messages: [], busy: "", error: "" };
+      state = blank(); ui.tab = "overview"; ui.gapFilter = "all"; ui.ai = { plan: "", messages: [], busy: "", error: "" };
       save(); go("#/");
     } else if (action === "screen") {
       state.screening[el.getAttribute("data-q")] = el.getAttribute("data-v");
@@ -706,8 +685,6 @@
   });
 
   app.addEventListener("keydown", function (e) {
-    var el = e.target.closest("[data-action=pick-fw]");
-    if (el && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); el.click(); }
     if (e.target.id === "ai-input" && e.key === "Enter") { e.preventDefault(); aiSend(e.target.value); }
   });
 

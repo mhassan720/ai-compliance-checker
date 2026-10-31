@@ -81,7 +81,6 @@
   function sectionStatus(section, fwId, prof, includeVoluntary) {
     var highLike = prof.tier === "high" || prof.tier === "unacceptable";
     if (fwId === "rt") return prof.flags.runtime && (highLike || includeVoluntary) ? "assurance" : "excluded";
-    if (fwId !== "eu") return "mandatory";
     var applicable;
     switch (section.applies) {
       case "all": applicable = true; break;
@@ -98,15 +97,15 @@
     return "excluded";
   }
 
-  function frameworkIds(choice) {
-    return choice === "both" ? ["eu", "nist"] : [choice];
+  function frameworkIds() {
+    return ["eu"];
   }
 
   // Returns [{ fw, section, status }] for every section that will be asked.
   function plan(state) {
     var prof = profile(state.screening);
     var out = [];
-    var ids = frameworkIds(state.framework);
+    var ids = frameworkIds();
     if (root.FRAMEWORKS.rt) ids = ids.concat("rt");
     ids.forEach(function (fwId) {
       var fw = root.FRAMEWORKS[fwId];
@@ -233,7 +232,7 @@
 
     return {
       generatedAt: new Date().toISOString(),
-      framework: state.framework,
+      framework: "eu",
       meta: state.meta || {},
       profile: prof,
       overall: overall,
