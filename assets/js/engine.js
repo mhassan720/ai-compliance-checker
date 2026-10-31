@@ -1,5 +1,6 @@
 /*
- * Scoring engine. Pure functions, no DOM access, so it can be tested in Node.
+ * Scoring engine for the EU AI Act assessment. Pure functions, no DOM access,
+ * so it can be tested in Node.
  *
  * Answers: "yes" = 1, "partial" = 0.5, "no" = 0, "na" = excluded.
  * Unanswered questions count as "no" and are flagged in the result.
@@ -7,12 +8,6 @@
 (function (root) {
   var VALUE = { yes: 1, partial: 0.5, no: 0 };
   var LEVELS = ["low", "medium", "high", "critical"];
-  var LAYERS = [
-    { id: "lifecycle", label: "Lifecycle (on paper)", description: "Documents, processes and tests done before release" },
-    { id: "runtime", label: "Runtime (every decision)", description: "Checks enforced automatically on each decision" },
-    { id: "human", label: "Human oversight", description: "People who approve, override or stop decisions" },
-    { id: "continuous", label: "Continuous (after release)", description: "Monitoring, drift detection and remediation" }
-  ];
   var USE_OPTIONS = {};
 
   function screeningQuestion(id) {
@@ -56,8 +51,7 @@
     var flags = {
       transparency: s["sc-interact"] === "yes" || (use && use.tier === "limited") || false,
       gpai: s["sc-gpai"] === "yes",
-      fria: highLike && (role === "deployer" || role === "both") && s["sc-public"] === "yes",
-      runtime: s["sc-runtime"] === "yes"
+      fria: highLike && (role === "deployer" || role === "both") && s["sc-public"] === "yes"
     };
 
     if (s["sc-eu"] === "no") {
@@ -76,12 +70,9 @@
     return { tier: tier, role: role, basis: basis, notes: notes, flags: flags, prohibited: prohibited };
   }
 
-  // Decides whether a section is mandatory, voluntary, assurance (Runtime Assurance
-  // module: beyond the legal minimum), or left out.
-  function sectionStatus(section, fwId, prof, includeVoluntary) {
+  // Decides whether a section is mandatory, voluntary, or left out.
+  function sectionStatus(section, prof, includeVoluntary) {
     var highLike = prof.tier === "high" || prof.tier === "unacceptable";
-    if (fwId === "rt") return prof.flags.runtime && (highLike || includeVoluntary) ? "assurance" : "excluded";
-    if (fwId !== "eu") return "mandatory";
     var applicable;
     switch (section.applies) {
       case "all": applicable = true; break;
@@ -98,22 +89,14 @@
     return "excluded";
   }
 
-  function frameworkIds(choice) {
-    return choice === "both" ? ["eu", "nist"] : [choice];
-  }
-
   // Returns [{ fw, section, status }] for every section that will be asked.
   function plan(state) {
     var prof = profile(state.screening);
+    var fw = root.FRAMEWORKS.eu;
     var out = [];
-    var ids = frameworkIds(state.framework);
-    if (root.FRAMEWORKS.rt) ids = ids.concat("rt");
-    ids.forEach(function (fwId) {
-      var fw = root.FRAMEWORKS[fwId];
-      fw.sections.forEach(function (section) {
-        var status = sectionStatus(section, fwId, prof, state.includeVoluntary !== false);
-        if (status !== "excluded") out.push({ fw: fw, section: section, status: status });
-      });
+    fw.sections.forEach(function (section) {
+      var status = sectionStatus(section, prof, state.includeVoluntary !== false);
+      if (status !== "excluded") out.push({ fw: fw, section: section, status: status });
     });
     return out;
   }
@@ -129,7 +112,6 @@
       : weight === 2 ? (highLike ? "high" : "medium")
       : (highLike ? "medium" : "low");
     if (status === "voluntary") level = shift(level, 2);
-    if (status === "assurance") level = shift(level, 1);
     if (answer === "partial") level = shift(level, 1);
     return level;
   }
@@ -149,7 +131,6 @@
     var prof = profile(state.screening);
     var answers = state.answers || {};
     var items = plan(state);
-    var fwTotals = {};
     var sections = [];
     var gaps = [];
     var unanswered = 0;
@@ -158,7 +139,7 @@
 
     items.forEach(function (item) {
       var sec = item.section;
-      var s = { fw: item.fw.id, fwName: item.fw.name, id: sec.id, title: sec.title, group: sec.group, articles: sec.articles, layer: sec.layer || "lifecycle",
+      var s = { id: sec.id, title: sec.title, group: sec.group, articles: sec.articles,
         status: item.status, evidence: sec.evidence || [], counts: { yes: 0, partial: 0, no: 0, na: 0, unanswered: 0 }, earned: 0, possible: 0 };
 
       sec.questions.forEach(function (q) {
@@ -171,7 +152,7 @@
         s.possible += q.weight;
         if (v < 1) {
           var answerForSeverity = a === "partial" ? "partial" : "no";
-          gaps.push({ fw: item.fw.id, fwName: item.fw.name, sectionId: sec.id, section: sec.title, id: q.id, ref: q.ref,
+          gaps.push({ sectionId: sec.id, section: sec.title, id: q.id, ref: q.ref,
             text: q.text, guidance: q.guidance, weight: q.weight, answer: a, status: item.status,
             severity: severity(q.weight, item.status, prof.tier, answerForSeverity) });
         }
@@ -179,16 +160,8 @@
 
       s.score = s.possible > 0 ? Math.round(pct(s.earned, s.possible)) : null;
       sections.push(s);
-      var t = fwTotals[item.fw.id] || (fwTotals[item.fw.id] = { id: item.fw.id, name: item.fw.name, earned: 0, possible: 0 });
-      t.earned += s.earned;
-      t.possible += s.possible;
       earnedAll += s.earned;
       possibleAll += s.possible;
-    });
-
-    var frameworks = Object.keys(fwTotals).map(function (k) {
-      var t = fwTotals[k];
-      return { id: t.id, name: t.name, score: Math.round(pct(t.earned, t.possible)) };
     });
 
     var rank = { critical: 0, high: 1, medium: 2, low: 3 };
@@ -199,7 +172,7 @@
       if (s.status !== "mandatory") return;
       s.evidence.forEach(function (d) {
         var status = s.score === null ? "n/a" : s.score >= 80 ? "in-place" : s.score >= 40 ? "partial" : "missing";
-        documents.push({ name: d, section: s.title, fw: s.fwName, status: status });
+        documents.push({ name: d, section: s.title, status: status });
       });
     });
 
@@ -207,44 +180,17 @@
     var counts = { critical: 0, high: 0, medium: 0, low: 0 };
     gaps.forEach(function (g) { counts[g.severity]++; });
 
-    // Where each control is enforced: on paper (lifecycle), on every decision (runtime),
-    // by people (human), or after release (continuous).
-    var layers = LAYERS.map(function (l) {
-      var earned = 0, possible = 0, questions = 0;
-      sections.forEach(function (s) {
-        if (s.layer !== l.id) return;
-        earned += s.earned; possible += s.possible; questions += s.possible ? s.counts.yes + s.counts.partial + s.counts.no + s.counts.unanswered : 0;
-      });
-      return { id: l.id, label: l.label, description: l.description, questions: questions, weight: possible,
-        share: possibleAll ? Math.round(possible / possibleAll * 100) : 0, score: possible ? Math.round(pct(earned, possible)) : null };
-    });
-
-    // Threat coverage: a threat is covered when its applicable mapped questions are all "Yes".
-    var asked = {};
-    items.forEach(function (it) { it.section.questions.forEach(function (q) { asked[q.id] = q; }); });
-    var threats = (root.THREATS || []).map(function (t) {
-      var ids = t.questions.filter(function (id) { return asked[id] && !(answers[id] === "na" && asked[id].na); });
-      var total = 0;
-      ids.forEach(function (id) { total += VALUE[answers[id]] || 0; });
-      var status = !ids.length ? "not-assessed" : total === ids.length ? "covered" : total > 0 ? "partial" : "open";
-      return { id: t.id, name: t.name, status: status, questions: ids,
-        missing: ids.filter(function (id) { return answers[id] !== "yes"; }) };
-    });
-
     return {
       generatedAt: new Date().toISOString(),
-      framework: state.framework,
+      framework: "EU AI Act",
       meta: state.meta || {},
       profile: prof,
       overall: overall,
       band: band(overall),
-      frameworks: frameworks,
       sections: sections,
       gaps: gaps,
       gapCounts: counts,
       unanswered: unanswered,
-      layers: layers,
-      threats: threats,
       strengths: sections.filter(function (s) { return s.score !== null && s.score >= 80; }).map(function (s) { return s.title; }),
       documents: documents,
       roadmap: [
@@ -255,5 +201,5 @@
     };
   }
 
-  root.Engine = { profile: profile, plan: plan, evaluate: evaluate, severity: severity, band: band, frameworkIds: frameworkIds, LAYERS: LAYERS };
+  root.Engine = { profile: profile, plan: plan, evaluate: evaluate, severity: severity, band: band };
 })(typeof window !== "undefined" ? window : globalThis);

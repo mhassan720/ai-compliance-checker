@@ -1,48 +1,26 @@
 # AI Compliance Checker
 
-A free, browser-only self-assessment of AI systems against the **EU AI Act** (Regulation (EU) 2024/1689) and the **NIST AI Risk Management Framework 1.0**.
+A free, browser-only self-assessment of AI systems against the **EU AI Act** (Regulation (EU) 2024/1689).
 
-Pick a framework, answer a short screening that classifies the system's risk tier, then answer the questions that apply. You get:
+Answer a short screening that classifies the system's risk tier, then answer the questions that apply. You get:
 
-- an overall readiness score, a score per framework, and a score per category
 - the EU AI Act risk tier (unacceptable, high, limited, minimal) with the reason
-- a gap analysis with article or subcategory references and a recommended action for each gap
+- an overall readiness score and a score per category
+- a gap analysis with article references and a recommended action for each gap
 - a three-phase remediation roadmap (30 / 90 / 180 days)
 - a checklist of the documents you need to show for each applicable obligation
 - export to PDF (print), JSON and CSV
 
 Everything runs in the browser. Answers are stored only in `localStorage` and never uploaded.
 
-## Question banks
+## Question bank
 
-| Framework | Sections | Questions |
+| Part | Sections | Questions |
 |---|---|---|
-| EU AI Act | 15 (Art. 4, 5, 9-15, 17, 20-21, 27, 43-49, 50, 53-55, 72-73) | 73, filtered by risk tier, role, GPAI and FRIA applicability |
-| NIST AI RMF | 19 categories across GOVERN, MAP, MEASURE, MANAGE | 72 (one per subcategory) |
-| Runtime Assurance (optional) | 8 (policy records, per-decision guards, reasoning faithfulness, model integrity, audit trail, risk routing, trust states, re-certification) | 33 |
-| Screening | — | 10 (not scored) |
+| Screening | — | 9 (not scored) |
+| Assessment | 15 (Art. 4, 5, 9-15, 17, 20-21, 27, 43-49, 50, 53-55, 72-73) | 73, filtered by risk tier, role, GPAI and FRIA applicability |
 
-## Runtime Assurance module
-
-A checklist shows what is documented, not what the system does on each decision. When the screening question about decisions made at runtime is answered Yes, the Runtime Assurance module asks whether the obligations of Articles 10, 12, 13, 14 and 15 are enforced and evidenced on every decision. Its gaps are rated one level lower than legal gaps because it goes beyond the legal minimum.
-
-The **Coverage** tab then shows how much of the assessment is enforced on paper (lifecycle), on every decision (runtime), by people (human oversight) and after release (continuous), and which runtime threats are still open.
-
-The module is based on: M. Hassan, B. Sardar, S. Islam, S. Silvestri, F. Fiori, D. Di Stasio, D. Amelin, *Governing High-Risk AI at Runtime: Reasoning Guards, Behavioural Attestation and Trust-Based Remediation*.
-
-The questions live in plain data files, so they are easy to edit:
-
-- `assets/js/data/eu-ai-act.js`: EU sections, questions and screening
-- `assets/js/data/nist-ai-rmf.js`: NIST sections and questions
-- `assets/js/data/runtime-assurance.js`: Runtime Assurance sections, questions and threat list
-
-Each question has an `id`, `text`, `ref` (article or subcategory), `weight` (1-3), `guidance` (the recommended action) and an optional `na: true` to allow "Not applicable".
-
-## AI assistant (optional)
-
-The results page can show an **AI Assistant** tab that writes a remediation plan and answers questions about the result. It calls a small backend on a Hugging Face Space (open Qwen 2.5 7B model). Set its address in `assets/js/config.js`; when `aiEndpoint` is empty the tab is hidden and nothing is ever sent.
-
-Only the framework, risk level, scores and top 15 gaps are sent, and only when the user clicks. The system name, organisation and notes are never sent.
+The questions live in `assets/js/data/eu-ai-act.js`. Each question has an `id`, `text`, `ref` (article), `weight` (1-3), `guidance` (the recommended action) and an optional `na: true` to allow "Not applicable".
 
 ## Scoring
 
@@ -81,10 +59,7 @@ The empty `.nojekyll` file tells GitHub Pages to serve the files as they are.
 ```
 index.html                  page shell
 assets/css/styles.css       styles (light and dark theme, print layout for PDF)
-assets/js/config.js         site settings (AI assistant address)
 assets/js/data/eu-ai-act.js EU AI Act question bank and screening
-assets/js/data/nist-ai-rmf.js NIST AI RMF question bank
-assets/js/data/runtime-assurance.js Runtime Assurance question bank and threats
 assets/js/engine.js         risk classification and scoring (no DOM, testable in Node)
 assets/js/app.js            interface and routing
 ```
